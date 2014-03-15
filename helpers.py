@@ -16,7 +16,8 @@ def D(num):
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
-                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False, headless=False):
+                 rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, 
+                 testcoin=False, unittest=False, headless=False, pid_file=None):
 
     # Unittests always run on testnet.
     if unittest and not testnet:
@@ -125,6 +126,13 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
         config.DB_VERSION_MAJOR
         config.DATABASE = os.path.join(config.DATA_DIR, 'counterpartyd.' + str(config.DB_VERSION_MAJOR) + '.db')
 
+    if pid_file:
+        config.PID = pid_file
+    elif has_config and 'pid-file' in configfile['Default']:
+        config.PID = configfile['Default']['pid-file']
+    else:
+        config.PID = os.path.join(config.DATA_DIR, 'counterpartyd.pid')
+
     config.ADDRESSVERSION = b'\x00'
     config.BLOCK_FIRST = 278270
     config.BURN_START = 278310
@@ -135,7 +143,25 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     # Headless operation
     config.HEADLESS = headless
     config.TESTNET = False
+    config.INSIGHT_ENABLE = False
+    config.LIGHT = False
 
+    #GUI host:
+    if has_config and 'composer-host' in configfile['Default'] and configfile['Default']['composer-host']:
+        config.COMPOSER_HOST = configfile['Default']['composer-host']
+    else:
+        config.COMPOSER_HOST = 'localhost'
+
+    # GUI port
+    if has_config and 'gcomposerui-port' in configfile['Default'] and configfile['Default']['composer-port']:
+        config.COMPOSER_PORT = configfile['Default']['composer-port']
+    else:
+        config.COMPOSER_PORT = '8089'
+    try:
+        int(config.COMPOSER_PORT)
+        assert int(config.COMPOSER_PORT) > 1 and int(config.COMPOSER_PORT) < 65535
+    except:
+        config.COMPOSER_PORT = '8089'
     
     return configfile
 
@@ -184,10 +210,13 @@ class DecimalEncoder(json.JSONEncoder):
             return str(o)
         return super(DecimalEncoder, self).default(o)
 
-def check_auth(user, passwd):
-    if user==config.GUI_USER and passwd==config.GUI_PASSWORD:
-        return True
-    return False
+def check_auth(request):
+    user, password = request.auth or (None, None)
+    if config.MODE=="gui" and (user is None or user!=config.GUI_USER or password!=config.GUI_PASSWORD):
+        err = HTTPError(401, "Access denied.")
+        err.add_header('WWW-Authenticate', 'Basic realm="%s"' % "Counterypary GUI")
+        return err
+
 
 def wallet_unlock(passphrase=None):
     success_response = {'success':True, 'message':'Wallet unlocked'}
@@ -214,4 +243,17 @@ def wallet_unlock(passphrase=None):
                 return {'success':False, 'message':'Invalid passhrase'}
         else:
             return {'success':False, 'message':'Wallet locked. Type your passphrase'}
+
+def write_pid():
+    pid = str(os.getpid())
+    pidf = open(config.PID, 'w')
+    pidf.write(pid)
+    pidf.close()
+
+def decorate_if(dec, cond):
+    def resdec(f):
+        if not cond:
+            return f
+        return dec(f)
+    return resdec
 
