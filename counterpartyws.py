@@ -33,7 +33,7 @@ counterpartyd_params = {
     'btcpay': ['order_match_id'],
     'cancel': ['offer_hash'],
     'issuance': ['source', 'transfer_destination', 'asset_name', 'quantity', 'divisible', 'callable', 'call_date', 'call_price', 'description'],
-    'dividend': ['source', 'asset', 'quantity_per_share'],
+    'dividend': ['source', 'asset', 'quantity_per_share', 'dividend_asset'],
     'callback': ['source', 'asset', 'fraction_per_share'],
     'broadcast': ['source', 'text', 'value', 'fee_fraction'],
     'bet': ['source', 'feed_address', 'bet_type', 'deadline', 'wager', 'counterwager', 'target_value', 'leverage', 'expiration']
@@ -289,8 +289,9 @@ def counterparty_action():
             elif action=='dividend':
                 source = getp('source')
                 asset = getp('asset') 
-                quantity_per_share = util.devise(db, getp('quantity_per_share'), 'XCP', 'input')
-                tx_info = dividend.compose(db, source, quantity_per_unit, asset)
+                dividend_asset = getp('dividend_asset') 
+                quantity_per_share = util.devise(db, getp('quantity_per_share'), dividend_asset, 'input')          
+                tx_info = dividend.compose(db, source, quantity_per_share, asset)
                 result = generate_unsigned_hex(tx_info) 
 
             elif action=='callback':
