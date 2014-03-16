@@ -34,7 +34,13 @@ Counterpartyd follows blocks and uses local sqlite database to compose transacti
 
 <pre>
 
+screen -S follower
+python3 followblocks.py
+ctrl+a+d
+
+screen -S counterpartyws
 python3 counterpartyws.py
+ctrl+a+d
 
 </pre>
 
@@ -45,7 +51,13 @@ Counterpartyws uses distant counterpartyws running as Transactions Composer.
 
 <pre>
 
+screen -S pyrpcwallet
+python3 pyrpcwallet.py
+ctrl+a+d
+
+screen -S counterpartyws
 python3 counterpartyws.py --light
+ctrl+a+d
 
 </pre>
 
@@ -56,7 +68,13 @@ Used by light counterpartyws to compose transactions.
 
 <pre>
 
+screen -S follower
+python3 followblocks.py
+ctrl+a+d
+
+screen -S counterpartyws
 python3 counterpartyws.py --composer
+ctrl+a+d
 
 </pre>
 
