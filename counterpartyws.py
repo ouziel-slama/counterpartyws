@@ -370,13 +370,13 @@ def run_server():
         config.MODE = "gui"
         if args.light:
             bictoind_infos = bitcoin.rpc("getinfo", [])
-            if 'pyrpcwallet' not in getinfo:
+            if 'pyrpcwallet' not in bictoind_infos:
                 raise Exception("You must have pyrpcwallet running to run counterpartyws in light mode")
             config.LIGHT = True
 
     write_pid()
 
-    app.run(host=config.GUI_HOST, port=config.GUI_PORT, reloader=True)
+    app.run(host=config.GUI_HOST, port=config.GUI_PORT)
 
 
 if __name__ == '__main__':

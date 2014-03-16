@@ -6,7 +6,7 @@ import appdirs
 import decimal
 import apsw
 from counterpartyd.lib import config, util, bitcoin
-
+from bottle import HTTPError
 
 def D(num):
     try:
@@ -153,7 +153,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
         config.COMPOSER_HOST = 'localhost'
 
     # GUI port
-    if has_config and 'gcomposerui-port' in configfile['Default'] and configfile['Default']['composer-port']:
+    if has_config and 'composer-port' in configfile['Default'] and configfile['Default']['composer-port']:
         config.COMPOSER_PORT = configfile['Default']['composer-port']
     else:
         config.COMPOSER_PORT = '8089'
