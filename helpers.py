@@ -6,7 +6,7 @@ import appdirs
 import decimal
 import apsw
 from counterpartyd.lib import config, util, bitcoin
-
+from bottle import HTTPError
 
 def D(num):
     try:
