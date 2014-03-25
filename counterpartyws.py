@@ -10,16 +10,17 @@ import decimal
 import time
 import json
 import logging
+import functools
 import requests as httpclient
 from requests.auth import HTTPBasicAuth
 
 import bottle
-from bottle import route, run, template, Bottle, request, static_file, redirect, error, hook, response, abort, auth_basic
+from bottle import route, run, template, Bottle, request, static_file, redirect, error, hook, response, abort, HTTPError
 
 from counterpartyd.lib import (config, util, exceptions, bitcoin)
 from counterpartyd.lib import (send, order, btcpay, issuance, broadcast, bet, dividend, burn, cancel, callback)
 
-from helpers import set_options, init_logging, D, S, DecimalEncoder, connect_to_db, check_auth, wallet_unlock, write_pid
+from helpers import set_options, init_logging, D, S, DecimalEncoder, connect_to_db, wallet_unlock, write_pid
 
 app = Bottle()
 set_options()
@@ -70,22 +71,32 @@ def composer_request(path, method='GET', data={}):
     result = composer_response.json()
     return result
 
+def check_auth(realm="private", text="Access denied"):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*a, **ka):
+            user, password = request.auth or (None, None)
+            # no authentification when composer
+            if config.MODE=="gui" and (user is None or user!=config.GUI_USER or password!=config.GUI_PASSWORD):
+                err = HTTPError(401, text)
+                err.add_header('WWW-Authenticate', 'Basic realm="%s"' % realm)
+                return err
+            return func(*a, **ka)
+        return wrapper
+    return decorator
+
 @app.hook('after_request')
 def enable_cors():
     # set CORS headers
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
-
     if bottle.request.method == 'OPTIONS':
         return ""
 
-@app.hook('before_request')
-def auth_user():
-    if config.MODE=='gui':
-        check_auth(request)
 
 @app.route('/')
+@check_auth()
 def index():
     page = "counterpartygui.html"
     if config.MODE=="composer":
@@ -94,6 +105,7 @@ def index():
 
 
 @app.route('/addresses/<address>')
+@check_auth()
 def get_address(address):
     try:
         address_info = util.get_address(db, address=address)
@@ -104,6 +116,7 @@ def get_address(address):
 
 
 @app.route('/btcpay/<order_match_id>/source')
+@check_auth()
 def btcpay_source(order_match_id):
     try:
         tx_info = btcpay.compose(db, order_match_id)
@@ -114,6 +127,7 @@ def btcpay_source(order_match_id):
 
 
 @app.route('/cancel/<offer_hash>/source')
+@check_auth()
 def cancel_source(offer_hash):
     try:
         tx_info = cancel.compose(db, offer_hash)
@@ -123,6 +137,7 @@ def cancel_source(offer_hash):
     return json.dumps(result, cls=DecimalEncoder) 
 
 @app.route('/wallet')
+@check_auth()
 def wallet():
     wallet = {'addresses': {}}
     totals = {}
@@ -164,6 +179,7 @@ def wallet():
 
 
 @app.post('/action')
+@check_auth()
 def counterparty_action():
 
     unsigned = True if getp('unsigned')!=None and getp('unsigned')=="1" else False
@@ -344,6 +360,7 @@ def counterparty_action():
     return json.dumps(result, cls=DecimalEncoder)
 
 @app.route('/<filename:path>')
+@check_auth()
 def send_static(filename):
     return static_file(filename, root=config.GUI_DIR)
 

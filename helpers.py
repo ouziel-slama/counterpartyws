@@ -6,7 +6,6 @@ import appdirs
 import decimal
 import apsw
 from counterpartyd.lib import config, util, bitcoin
-from bottle import HTTPError
 
 def D(num):
     try:
@@ -209,13 +208,6 @@ class DecimalEncoder(json.JSONEncoder):
         if isinstance(o,  decimal.Decimal):
             return str(o)
         return super(DecimalEncoder, self).default(o)
-
-def check_auth(request):
-    user, password = request.auth or (None, None)
-    if config.MODE=="gui" and (user is None or user!=config.GUI_USER or password!=config.GUI_PASSWORD):
-        err = HTTPError(401, "Access denied.")
-        err.add_header('WWW-Authenticate', 'Basic realm="%s"' % "Counterypary GUI")
-        return err
 
 
 def wallet_unlock(passphrase=None):
